@@ -24,8 +24,14 @@ def get_database_url() -> Tuple[str, str]:
     # 1. Direct DATABASE_URL
     custom_url = os.getenv("DATABASE_URL")
     if custom_url and custom_url.strip():
-        db_type = "postgresql" if "postgres" in custom_url else "other"
-        return custom_url.strip(), db_type
+        url = custom_url.strip()
+        # Supabase and standard PostgreSQL URLs compatibility with SQLAlchemy 2 + psycopg2
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+psycopg2://", 1)
+        elif url.startswith("postgresql://") and not url.startswith("postgresql+"):
+            url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
+        db_type = "postgresql" if "postgres" in url else "other"
+        return url, db_type
 
     # 2. PostgreSQL structured credentials
     db_type = os.getenv("DB_TYPE", "").lower().strip()
@@ -44,6 +50,17 @@ def get_database_url() -> Tuple[str, str]:
     sqlite_url = f"sqlite:///{DEFAULT_SQLITE_PATH.as_posix()}"
     return sqlite_url, "sqlite"
 
+def normalize_url(url: str) -> str:
+    """Normalizes Postgres connection strings for SQLAlchemy 2.0 and psycopg2."""
+    if not url:
+        return ""
+    u = url.strip()
+    if u.startswith("postgres://"):
+        u = u.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif u.startswith("postgresql://") and not u.startswith("postgresql+"):
+        u = u.replace("postgresql://", "postgresql+psycopg2://", 1)
+    return u
+
 def get_engine(custom_url: str = None) -> Tuple[Engine, str, str]:
     """
     Creates and validates an SQLAlchemy engine.
@@ -52,7 +69,7 @@ def get_engine(custom_url: str = None) -> Tuple[Engine, str, str]:
     Returns: (engine, db_type, status_message)
     """
     if custom_url:
-        url = custom_url
+        url = normalize_url(custom_url)
         db_type = "postgresql" if "postgres" in url else "sqlite"
     else:
         url, db_type = get_database_url()
@@ -77,7 +94,8 @@ def get_engine(custom_url: str = None) -> Tuple[Engine, str, str]:
 def test_db_connection(url: str) -> Tuple[bool, str]:
     """Tests if a given database URL is reachable."""
     try:
-        eng = create_engine(url, pool_pre_ping=True)
+        norm_url = normalize_url(url)
+        eng = create_engine(norm_url, pool_pre_ping=True)
         with eng.connect() as conn:
             conn.execute(text("SELECT 1"))
         return True, "Connection successful!"
