@@ -602,32 +602,3 @@ with tabs[5]:
                     mime="text/csv"
                 )
 
-# ----------------------------------------------------------------------------
-# Vercel Serverless Function Handler
-# ----------------------------------------------------------------------------
-from http.server import BaseHTTPRequestHandler
-
-class handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header("Content-type", "text/html; charset=utf-8")
-        self.end_headers()
-        html_payload = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Analytics & Workforce Intelligence Platform</title>
-    <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #0F172A; }
-        iframe { width: 100%; height: 100%; border: none; }
-    </style>
-</head>
-<body>
-    <iframe src="https://fa5214d5bb8260.lhr.life" allow="fullscreen"></iframe>
-</body>
-</html>"""
-        self.wfile.write(html_payload.encode("utf-8"))
-
-app = handler
-
